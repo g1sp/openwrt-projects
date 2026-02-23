@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Instant Fix — Why is Zoom freezing?</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --surface: #1a2332;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent: #58a6ff;
+      --green: #3fb950;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      min-height: 100vh;
+      padding: 2rem;
+      line-height: 1.5;
+    }
+    .container { max-width: 36rem; margin: 0 auto; }
+    h1 { font-size: 1.5rem; margin-bottom: 0.25rem; }
+    .sub { color: var(--muted); font-size: 0.9rem; margin-bottom: 1rem; }
+    .hint { font-size: 0.8rem; color: var(--muted); margin-top: 1rem; }
+    .input-row { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+    input {
+      flex: 1;
+      padding: 0.75rem 1rem;
+      font-size: 1rem;
+      border: 1px solid var(--surface);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--text);
+    }
+    input:focus { outline: none; border-color: var(--accent); }
+    button {
+      padding: 0.75rem 1.25rem;
+      font-size: 1rem;
+      font-weight: 500;
+      border: none;
+      border-radius: 8px;
+      background: var(--accent);
+      color: var(--bg);
+      cursor: pointer;
+    }
+    button:hover { opacity: 0.9; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .result {
+      background: var(--surface);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      margin-top: 1rem;
+      min-height: 4rem;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .result.empty { color: var(--muted); }
+    .chip {
+      padding: 0.4rem 0.75rem;
+      font-size: 0.85rem;
+      border: 1px solid var(--muted);
+      border-radius: 6px;
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      margin-right: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .chip:hover { border-color: var(--accent); color: var(--accent); }
+    .suggestions { margin-bottom: 1rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Instant Fix</h1>
+    <p class="sub">Ask why your call or internet is choppy. Suggestions include 5 GHz WiFi and resetting network settings (never rebooting the router).</p>
+
+    <div class="suggestions">
+      <button type="button" class="chip" data-q="Why is Zoom freezing?">Why is Zoom freezing?</button>
+      <button type="button" class="chip" data-q="Why is the internet slow?">Why is the internet slow?</button>
+      <button type="button" class="chip" data-q="My video call is stuttering">My video call is stuttering</button>
+    </div>
+
+    <div class="input-row">
+      <input type="text" id="query" placeholder="e.g. Why is Zoom freezing?" autocomplete="off">
+      <button type="button" id="send">Ask</button>
+    </div>
+
+    <div id="result" class="result empty">Ask a question above. Uses mock telemetry + local Ollama.</div>
+
+    <p class="hint">Runs on port 8766. Ensure Ollama is running (e.g. <code>ollama run phi3:mini</code>).</p>
+  </div>
+
+  <script>
+    var queryEl = document.getElementById('query');
+    var sendBtn = document.getElementById('send');
+    var resultEl = document.getElementById('result');
+
+    function setResult(html, isError) {
+      resultEl.classList.remove('empty', 'error');
+      resultEl.innerHTML = html;
+      if (isError) resultEl.classList.add('error');
+    }
+
+    sendBtn.onclick = function () {
+      var q = (queryEl.value || '').trim();
+      if (!q) return;
+      sendBtn.disabled = true;
+      setResult('Checking network and asking the assistant…', false);
+
+      fetch('/api/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: q })
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (data.error) {
+            setResult(data.error, true);
+          } else {
+            var html = (data.answer || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+            if (data.telemetry_summary)
+              html += '<div class="hint" style="margin-top:0.75rem;">Telemetry: ' + data.telemetry_summary + '</div>';
+            setResult(html, false);
+          }
+        })
+        .catch(function (err) {
+          setResult('Request failed: ' + err.message, true);
+        })
+        .then(function () { sendBtn.disabled = false; });
+    };
+
+    queryEl.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') sendBtn.click();
+    });
+
+    document.querySelectorAll('.chip').forEach(function (btn) {
+      btn.onclick = function () {
+        queryEl.value = this.getAttribute('data-q');
+        sendBtn.click();
+      };
+    });
+  </script>
+</body>
+</html>
