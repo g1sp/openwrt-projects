@@ -1,0 +1,44 @@
+#!/bin/sh
+# Router Assistant — CLI entrypoint.
+
+case "$0" in */*) _d="${0%/*}"; ;; *) _d="."; ;; esac
+ASSIST_DIR="${ASSIST_DIR:-$_d}"
+[ "$ASSIST_DIR" = . ] && [ -n "$PWD" ] && ASSIST_DIR="$PWD"
+[ -r "$ASSIST_DIR/parser.sh" ] || ASSIST_DIR="/usr/share/router-assistant"
+[ -r "$ASSIST_DIR/parser.sh" ] || ASSIST_DIR=""
+
+DRY_RUN=0
+CONFIRM_BLOCK=1
+phrase=""
+
+while [ -n "$1" ]; do
+	case "$1" in
+		--dry-run) DRY_RUN=1; shift ;;
+		--yes)     CONFIRM_BLOCK=0; shift ;;
+		-h|--help)
+			echo "Usage: router-assist [--dry-run] [--yes] [phrase]"
+			echo "  --dry-run  Print command only, do not execute."
+			echo "  --yes      Skip confirmation for block/unblock."
+			echo "  phrase     e.g. 'show clients', 'block 192.168.1.50'"
+			echo "  If phrase is omitted, read one line from stdin."
+			exit 0
+			;;
+		*) phrase="$1"; shift ;;
+	esac
+done
+
+if [ -z "$phrase" ]; then
+	printf "> "
+	read -r phrase
+	[ -z "$phrase" ] && exit 0
+fi
+
+[ -z "$ASSIST_DIR" ] && { echo "router-assist: script dir not found."; exit 1; }
+
+parsed=$(sh "$ASSIST_DIR/parser.sh" "$phrase") || { echo "Parse error."; exit 1; }
+export DRY_RUN CONFIRM_BLOCK
+# Split TAB-separated into intent + args
+set -- $parsed
+intent="$1"
+shift
+sh "$ASSIST_DIR/executor.sh" "$intent" "$@"

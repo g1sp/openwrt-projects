@@ -1,0 +1,98 @@
+#!/bin/sh
+# Network Sentinel — CLI: plain-English threat brief from last event(s)
+
+# When run from /usr/bin (OpenWrt install), use /usr/share/sentinel for templates
+if [ -z "$SENTINEL_DIR" ]; then
+	[ "${0%/*}" = /usr/bin ] && SENTINEL_DIR=/usr/share/sentinel || SENTINEL_DIR="${0%/*}"
+fi
+EVENTS_FILE="${SENTINEL_EVENTS_FILE:-/tmp/sentinel_events.log}"
+BRIEF_FILE="${SENTINEL_BRIEF_FILE:-/tmp/sentinel_brief.txt}"
+n=1
+daily=0
+refresh=0
+json=0
+
+while [ -n "$1" ]; do
+	case "$1" in
+		-n) n="$2"; shift 2 ;;
+		--daily) daily=1; shift ;;
+		--refresh) refresh=1; shift ;;
+		--json) json=1; shift ;;
+		-h|--help)
+			echo "Usage: sentinel-brief [-n N] [--daily] [--refresh] [--json]"
+			echo "  -n N       Show brief for last N events (default 1)"
+			echo "  --daily    Summary of recent activity (last 24h if timestamps available)"
+			echo "  --refresh  Run collector once before briefing (append from logread)"
+			echo "  --json     Output machine-readable lines (type, ts, explanation, action)"
+			exit 0
+			;;
+		*) shift ;;
+	esac
+done
+
+if [ -x "$SENTINEL_DIR/collector.sh" ]; then
+	COLLECTOR="$SENTINEL_DIR/collector.sh"
+elif command -v sentinel-collector >/dev/null 2>&1; then
+	COLLECTOR="sentinel-collector"
+else
+	COLLECTOR=""
+fi
+EXPLAINER_USE_SH=0
+if [ -x "$SENTINEL_DIR/explainer.sh" ]; then
+	EXPLAINER="$SENTINEL_DIR/explainer.sh"
+elif [ -r "$SENTINEL_DIR/explainer.sh" ]; then
+	EXPLAINER="$SENTINEL_DIR/explainer.sh"
+	EXPLAINER_USE_SH=1
+elif command -v sentinel-explainer >/dev/null 2>&1; then
+	EXPLAINER="sentinel-explainer"
+else
+	EXPLAINER=""
+fi
+
+if [ "$refresh" = 1 ] && [ -n "$COLLECTOR" ]; then
+	export SENTINEL_EVENTS_FILE="$EVENTS_FILE"
+	"$COLLECTOR" --once 2>/dev/null
+fi
+
+if [ "$daily" = 1 ]; then
+	# Use a larger window; filter by last 24h if events have timestamps (field 2)
+	now=$(date +%s 2>/dev/null) || now=0
+	cutoff=$(( now - 86400 ))
+	[ -r "$EVENTS_FILE" ] && awk -v c="$cutoff" -F'\t' '$2 >= c || $2 == ""' "$EVENTS_FILE" | tail -n 50 > "${EVENTS_FILE}.daily" 2>/dev/null
+	[ -r "${EVENTS_FILE}.daily" ] && event_file="${EVENTS_FILE}.daily" || event_file="$EVENTS_FILE"
+	n=50
+else
+	event_file="$EVENTS_FILE"
+fi
+
+if [ "$json" = 1 ]; then
+	[ -r "$event_file" ] || { echo "[]"; exit 0; }
+	tail -n "$n" "$event_file" | while read -r line; do
+		type=$(echo "$line" | cut -f1)
+		ts=$(echo "$line" | cut -f2)
+		src=$(echo "$line" | cut -f3)
+		dst=$(echo "$line" | cut -f4)
+		port=$(echo "$line" | cut -f5)
+		domain=$(echo "$line" | cut -f6)
+		echo "{\"type\":\"$type\",\"ts\":$ts,\"src\":\"$src\",\"dst\":\"$dst\",\"port\":\"$port\",\"domain\":\"$domain\"}"
+	done
+	exit 0
+fi
+
+if [ ! -r "$event_file" ] || [ ! -s "$event_file" ]; then
+	echo "No events yet. Run the collector (e.g. sentinel-collector) or use --refresh."
+	exit 1
+fi
+
+export SENTINEL_EVENTS_FILE="$EVENTS_FILE"
+export SENTINEL_TEMPLATES="${SENTINEL_TEMPLATES:-$SENTINEL_DIR/templates}"
+[ -z "$EXPLAINER" ] && { echo "sentinel-explainer not found."; exit 1; }
+if [ "$EXPLAINER_USE_SH" = 1 ]; then
+	out=$(sh "$EXPLAINER" "$event_file" "$n" 2>/dev/null) || out="Error generating brief."
+else
+	out=$("$EXPLAINER" "$event_file" "$n" 2>/dev/null) || out="Error generating brief."
+fi
+
+echo "$out"
+# Optionally write last brief to file for cron/LuCI
+echo "$out" > "$BRIEF_FILE" 2>/dev/null

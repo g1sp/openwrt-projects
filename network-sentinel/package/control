@@ -1,0 +1,11 @@
+Package: network-sentinel
+Version: 0.1.0-1
+Depends: logread
+Architecture: all
+Maintainer: Network Sentinel <sentinel@local>
+Section: net
+Priority: optional
+Description: Plain-English threat briefings from firewall and DNS activity.
+ Reads router logs, explains events in 2-3 sentences, suggests a safe action.
+ Template-based (Phase A); optional SLM via llama.cpp or proxy (Phase B).
+ No automatic firewall changes.

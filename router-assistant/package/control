@@ -1,0 +1,10 @@
+Package: router-assistant
+Version: 0.1.0-1
+Depends: uci
+Architecture: all
+Maintainer: Router Assistant <assist@local>
+Section: net
+Priority: optional
+Description: CLI assistant for OpenWrt: phrase -> UCI/firewall actions.
+ "show clients", "block 192.168.1.50", "enable guest wifi", etc.
+ Keyword matching, no SLM. --dry-run and --yes supported.

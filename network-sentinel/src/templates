@@ -1,0 +1,10 @@
+# Network Sentinel — template definitions
+# Format: EVENT_TYPE|explanation|suggested_action
+# Placeholders: %SRC% %DST% %PORT% %DOMAIN% %REASON%
+
+FW_BLOCK|Your router blocked a connection from %SRC% to %DST% (port %PORT%). This is usually a firewall rule or a device trying to reach a restricted service.|If this is expected (e.g. a game or app), add an allow rule in Firewall. Otherwise leave as is.
+FW_DROP|A packet was dropped: %SRC% → %DST%. The firewall denied this traffic.|Check if the source device or destination is one you trust. You can add an exception in Firewall if needed.
+DNS_BLOCK|A DNS query for "%DOMAIN%" was blocked (e.g. by ad-block or parental control).|If you need to allow this site, add an exception in DNS or Ad-block settings. Otherwise no action needed.
+DNS_QUERY|A device on your network looked up "%DOMAIN%".|Normal if you recognize the site. If not, check which device made the query in the router's client list.
+SCAN_DETECT|Multiple connection attempts from %SRC% to different ports were seen. This may indicate a scan or misconfigured device.|Ensure the source device is trusted. Consider blocking it temporarily from the firewall if you don't recognize it.
+UNKNOWN|Network activity was logged: %REASON%.|Review the event in the router logs. No change is required unless you see repeated or suspicious patterns.

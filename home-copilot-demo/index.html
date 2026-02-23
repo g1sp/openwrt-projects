@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Home Network Copilot</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --surface: #1a2332;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent: #58a6ff;
+      --green: #3fb950;
+      --red: #f85149;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      min-height: 100vh;
+      padding: 2rem;
+      line-height: 1.5;
+    }
+    .container { max-width: 36rem; margin: 0 auto; }
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+    .sub {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 1.5rem;
+    }
+    .input-row {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    input {
+      flex: 1;
+      padding: 0.75rem 1rem;
+      font-size: 1rem;
+      border: 1px solid var(--surface);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--text);
+    }
+    input::placeholder { color: var(--muted); }
+    input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    button {
+      padding: 0.75rem 1.25rem;
+      font-size: 1rem;
+      font-weight: 500;
+      border: none;
+      border-radius: 8px;
+      background: var(--accent);
+      color: var(--bg);
+      cursor: pointer;
+    }
+    button:hover { opacity: 0.9; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .result {
+      background: var(--surface);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      margin-top: 1rem;
+      min-height: 4rem;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .result.empty { color: var(--muted); }
+    .result.error { border-left: 4px solid var(--red); }
+    .meta {
+      margin-top: 0.75rem;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    .meta strong { color: var(--text); }
+    .data-block {
+      margin-top: 0.5rem;
+      padding: 0.5rem 0;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      font-size: 0.85rem;
+    }
+    .data-block ul { margin: 0.25rem 0 0 1.25rem; padding: 0; }
+    .hint {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 1rem;
+    }
+    .suggestions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
+    .chip {
+      padding: 0.4rem 0.75rem;
+      font-size: 0.85rem;
+      border: 1px solid var(--muted);
+      border-radius: 6px;
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+    }
+    .chip:hover { border-color: var(--accent); color: var(--accent); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Home Network Copilot</h1>
+    <p class="sub">Ask in plain language. Powered by a local SLM (Ollama) on this machine.</p>
+    <p class="hint" style="background: var(--surface); padding: 0.5rem 0.75rem; border-radius: 6px; margin-bottom: 1rem;">
+      <strong>This app runs on port 8765.</strong> Open <code>http://localhost:8765</code> (not 11434 — that is Ollama’s API only, no buttons here).
+    </p>
+
+    <p class="hint" style="margin-bottom: 0.75rem;">Use these exact phrases to run the <strong>mock router</strong> (anything else gets a “router only” message):</p>
+    <div class="suggestions">
+      <button type="button" class="chip" data-q="Who's connected?">Who's connected?</button>
+      <button type="button" class="chip" data-q="List devices">List devices</button>
+      <button type="button" class="chip" data-q="List the devices">List the devices</button>
+      <button type="button" class="chip" data-q="Why did you block that?">Why did you block that?</button>
+      <button type="button" class="chip" data-q="Explain the last block">Explain the last block</button>
+      <button type="button" class="chip" data-q="Block Kids-Tablet">Block Kids-Tablet</button>
+      <button type="button" class="chip" data-q="Unblock Kids-Tablet">Unblock Kids-Tablet</button>
+      <button type="button" class="chip" data-q="What can you do?">What can you do?</button>
+      <button type="button" class="chip" data-q="Help">Help</button>
+    </div>
+
+    <div class="input-row">
+      <input type="text" id="query" placeholder="Type or click a command above" autocomplete="off">
+      <button type="button" id="send">Ask</button>
+    </div>
+
+    <div id="result" class="result empty">Click a command above or type one. Only the phrases listed trigger the mock router.</div>
+
+    <p class="hint">Demo uses mock data. Ensure Ollama is running (e.g. <code>ollama run phi3:mini</code>).</p>
+  </div>
+
+  <script>
+    var queryEl = document.getElementById('query');
+    var sendBtn = document.getElementById('send');
+    var resultEl = document.getElementById('result');
+
+    function setResult(html, isError) {
+      resultEl.classList.remove('empty', 'error');
+      resultEl.innerHTML = html;
+      if (isError) resultEl.classList.add('error');
+    }
+
+    sendBtn.onclick = function () {
+      var q = (queryEl.value || '').trim();
+      if (!q) return;
+      sendBtn.disabled = true;
+      setResult('Asking the copilot…', false);
+
+      fetch('/api/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: q })
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          var html = '';
+          if (data.error) {
+            html = data.error;
+            setResult(html, true);
+          } else {
+            html = (data.answer || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+            if (data.intent) html += '<div class="meta">Intent: <strong>' + data.intent + '</strong></div>';
+            if (data.data && data.data.devices) {
+              html += '<div class="data-block">Devices: <ul>';
+              data.data.devices.forEach(function (d) {
+                html += '<li>' + d.hostname + ' (' + d.ip + ')</li>';
+              });
+              html += '</ul></div>';
+            }
+            if (data.data && data.data.event) {
+              var e = data.data.event;
+              html += '<div class="data-block">Event: ' + e.type + ' — ' + e.domain + ' from ' + e.src + '</div>';
+            }
+            setResult(html, false);
+          }
+        })
+        .catch(function (err) {
+          setResult('Request failed: ' + err.message, true);
+        })
+        .then(function () { sendBtn.disabled = false; });
+    };
+
+    queryEl.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') sendBtn.click();
+    });
+
+    document.querySelectorAll('.chip').forEach(function (btn) {
+      btn.onclick = function () {
+        var q = this.getAttribute('data-q');
+        queryEl.value = q;
+        sendBtn.click();
+      };
+    });
+  </script>
+</body>
+</html>

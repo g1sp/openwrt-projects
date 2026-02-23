@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Router Assistant — Voice</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 32rem; margin: 2rem auto; padding: 0 1rem; }
+    input, button { font-size: 1rem; padding: 0.5rem; }
+    input { width: 100%; box-sizing: border-box; }
+    button { margin-top: 0.5rem; cursor: pointer; }
+    #result { margin-top: 1rem; padding: 0.75rem; background: #f0f0f0; border-radius: 4px; white-space: pre-wrap; font-size: 0.9rem; }
+    .error { background: #fee; }
+    .mic { margin-left: 0.5rem; }
+  </style>
+</head>
+<body>
+  <h1>Router Assistant</h1>
+  <p>Say or type a phrase; it is sent to the router and executed (e.g. &quot;show clients&quot;, &quot;status&quot;).</p>
+  <form id="f">
+    <input type="text" id="text" name="text" placeholder="e.g. show clients" autocomplete="off">
+    <button type="submit">Send</button>
+    <button type="button" id="mic" class="mic" title="Use microphone (browser speech)">🎤</button>
+  </form>
+  <div id="result"></div>
+
+  <script>
+    var form = document.getElementById('f');
+    var text = document.getElementById('text');
+    var result = document.getElementById('result');
+    var apiUrl = 'voice-api.cgi';
+    if (window.location.pathname.indexOf('/') >= 0) {
+      apiUrl = window.location.pathname.replace(/\/[^/]*$/, '/') + 'voice-api.cgi';
+    }
+
+    function show(json) {
+      result.className = json.ok ? '' : 'error';
+      if (json.ok) {
+        result.textContent = 'Intent: ' + json.intent + '\n' + (json.result || '');
+      } else {
+        result.textContent = 'Error: ' + (json.error || json.result || 'Unknown');
+      }
+    }
+
+    form.onsubmit = function(e) {
+      e.preventDefault();
+      var phrase = (text.value || '').trim();
+      if (!phrase) return;
+      result.textContent = 'Sending…';
+      fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'text=' + encodeURIComponent(phrase)
+      }).then(function(r) { return r.json(); }).then(show).catch(function(err) {
+        result.className = 'error';
+        result.textContent = 'Request failed: ' + err.message;
+      });
+    };
+
+    var mic = document.getElementById('mic');
+    if (typeof webkitSpeechRecognition !== 'undefined' || typeof SpeechRecognition !== 'undefined') {
+      var Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      var rec = new Recognition();
+      rec.continuous = false;
+      rec.interimResults = false;
+      rec.onresult = function(e) {
+        text.value = (e.results[0][0].transcript || '').trim();
+        if (text.value) form.dispatchEvent(new Event('submit'));
+      };
+      rec.onerror = function() { result.textContent = 'Speech recognition failed or not allowed.'; };
+      mic.onclick = function() {
+        result.textContent = 'Listening…';
+        rec.start();
+      };
+    } else {
+      mic.style.display = 'none';
+    }
+  </script>
+</body>
+</html>
