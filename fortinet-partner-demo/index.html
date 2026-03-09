@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fortinet Partner Demo — Local AI</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface2: #21262d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent: #f0883e;
+      --green: #3fb950;
+      --green-dim: #238636;
+      --red: #f85149;
+      --border: #30363d;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      min-height: 100vh;
+      padding: 0 0 2rem;
+      line-height: 1.5;
+    }
+    .local-ai-banner {
+      background: linear-gradient(90deg, rgba(35, 134, 54, 0.2) 0%, rgba(35, 134, 54, 0.05) 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 0.75rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .local-ai-banner .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+    .local-ai-banner .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    .local-ai-banner .dot.off {
+      background: var(--red);
+      animation: none;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+    .local-ai-banner .tagline {
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+    .local-ai-banner .tagline strong { color: var(--text); }
+    .container { max-width: 54rem; margin: 0 auto; padding: 1.5rem 2rem 0; }
+    h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.25rem; }
+    .sub { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.25rem; }
+    .tabs {
+      display: flex;
+      gap: 0.25rem;
+      margin-bottom: 1.25rem;
+      border-bottom: 1px solid var(--surface2);
+      flex-wrap: wrap;
+    }
+    .tab {
+      padding: 0.6rem 0.9rem;
+      font-size: 0.85rem;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--muted);
+      cursor: pointer;
+    }
+    .tab:hover { color: var(--text); }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .panel { display: none; }
+    .panel.active { display: block; }
+    .panel h2 { font-size: 1.1rem; margin: 0 0 0.35rem; color: var(--accent); }
+    .panel .desc { font-size: 0.85rem; color: var(--muted); margin-bottom: 1rem; }
+    .panel .local-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.75rem;
+      color: var(--green);
+      margin-bottom: 0.75rem;
+    }
+    .panel .local-badge::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+    }
+    textarea {
+      width: 100%;
+      min-height: 80px;
+      padding: 0.75rem 1rem;
+      font-size: 0.9rem;
+      font-family: ui-monospace, monospace;
+      border: 1px solid var(--surface2);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--text);
+      resize: vertical;
+    }
+    textarea.medium { min-height: 100px; }
+    textarea.tall { min-height: 140px; }
+    textarea::placeholder { color: var(--muted); }
+    textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    .row { display: flex; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap; align-items: center; }
+    button.primary {
+      padding: 0.6rem 1.25rem;
+      font-size: 0.95rem;
+      font-weight: 500;
+      border: none;
+      border-radius: 8px;
+      background: var(--accent);
+      color: var(--bg);
+      cursor: pointer;
+    }
+    button.primary:hover { opacity: 0.9; }
+    button.primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    button.secondary {
+      padding: 0.5rem 1rem;
+      font-size: 0.85rem;
+      border: 1px solid var(--surface2);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+    }
+    button.secondary:hover { border-color: var(--muted); }
+    .result {
+      background: var(--surface);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      margin-top: 1rem;
+      min-height: 2.5rem;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 0.9rem;
+      border: 1px solid var(--border);
+    }
+    .result.empty { color: var(--muted); }
+    .result.error { border-left: 4px solid var(--red); }
+    .hint { font-size: 0.8rem; color: var(--muted); margin-top: 1rem; }
+    .hint code { background: var(--surface2); padding: 0.1rem 0.35rem; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <header class="local-ai-banner" id="local-ai-banner">
+    <span class="badge">
+      <span class="dot" id="ollama-dot"></span>
+      <span id="ollama-status">Checking…</span>
+    </span>
+    <span class="tagline"><strong>Local AI</strong> — All processing runs on your machine via Ollama. No data is sent to the cloud.</span>
+  </header>
+
+  <div class="container">
+    <h1>Fortinet Partner Demo</h1>
+    <p class="sub">Use cases powered by a local LLM (Ollama). Policy, alerts, reports, VPN, compliance, and troubleshooting — your data never leaves this device.</p>
+
+    <div class="tabs">
+      <button type="button" class="tab active" data-panel="policy">Policy</button>
+      <button type="button" class="tab" data-panel="triage">Alert Triage</button>
+      <button type="button" class="tab" data-panel="report">Report</button>
+      <button type="button" class="tab" data-panel="quote">Quote / BOM</button>
+      <button type="button" class="tab" data-panel="vpn">VPN Wizard</button>
+      <button type="button" class="tab" data-panel="compliance">Compliance</button>
+      <button type="button" class="tab" data-panel="troubleshoot">Troubleshoot</button>
+    </div>
+
+    <div id="panel-policy" class="panel active">
+      <p class="local-badge">Powered by local LLM</p>
+      <h2>Policy Translator</h2>
+      <p class="desc">Plain-English security intent → FortiOS CLI and summary. Output is for human review; nothing is applied.</p>
+      <textarea id="intent" class="medium" placeholder="e.g. Block all outbound traffic to Tor exit nodes except from the security research VLAN" rows="3"></textarea>
+      <div class="row">
+        <button type="button" class="primary" id="btn-policy">Generate CLI</button>
+      </div>
+      <div id="result-policy" class="result empty">Output will appear here.</div>
+    </div>
+
+    <div id="panel-triage" class="panel">
+      <p class="local-badge">Powered by local LLM</p>
+      <h2>Alert Triage Engine</h2>
+      <p class="desc">Paste FortiAnalyzer-style log lines (or load sample). Get a prioritized triage report with explanations and recommended actions.</p>
+      <textarea id="logs" class="tall" placeholder="Paste log lines here or click Load sample." rows="8"></textarea>
+      <div class="row">
+        <button type="button" class="primary" id="btn-triage">Triage</button>
+        <button type="button" class="secondary" id="btn-sample-logs">Load sample</button>
+      </div>
+      <div id="result-triage" class="result empty">Triage report will appear here.</div>
+    </div>
+
+    <div id="panel-report" class="panel">
+      <p class="local-badge">Powered by local LLM</p>
+      <h2>Customer Report Narrator</h2>
+      <p class="desc">Generate an executive monthly security report from telemetry. Uses sample data by default.</p>
+      <textarea id="telemetry" class="medium" placeholder="JSON telemetry (or use Load sample)" rows="6"></textarea>
+      <div class="row">
+        <button type="button" class="primary" id="btn-report">Generate report</button>
+        <button type="button" class="secondary" id="btn-sample-telemetry">Load sample</button>
+      </div>
+      <div id="result-report" class="result empty">Executive narrative will appear here.</div>
+    </div>
+
+    <div id="panel-quote" class="panel">
+      <p class="local-badge">Powered by local LLM</p>
+      <h2>Quote / BOM Assistant</h2>
+      <p class="desc">Describe the customer requirement (users, sites, features). Get suggested FortiGate model and license bundles with short rationale. Add your own pricing.</p>
+      <textarea id="quote-requirements" class="medium" placeholder="e.g. 50 users, 2 sites, need firewall with VPN and UTM, possible HA later" rows="3"></textarea>
+      <div class="row">
+        <button type="button" class="primary" id="btn-quote">Suggest SKUs</button>
+        <button type="button" class="secondary" id="btn-sample-quote">Load sample</button>
+      </div>
+      <div id="result-quote" class="result empty">Suggested SKUs and rationale will appear here.</div>
+    </div>
+
+    <div id="panel-vpn" class="panel">
+      <p class="local-badge">Powered by local LLM</p>
+      <h2>VPN Wizard</h2>
+      <p class="desc">Describe the VPN requirement in plain English. Get a checklist, FortiOS CLI snippets, and caveats — for human review only.</p>
+      <textarea id="vpn-intent" class="medium" placeholder="e.g. Remote access VPN for 25 users with split tunnel, or site-to-site between HQ and branch" rows="3"></textarea>
+      <div class="row">
+        <button type="button" class="primary" id="btn-vpn">Generate checklist & CLI</button>
+        <button type="button" class="secondary" id="btn-sample-vpn">Load sample</button>
+      </div>
+      <div id="result-vpn" class="result empty">Checklist and CLI will appear here.</div>
+    </div>
+
+    <div id="panel-compliance" class="panel">
+      <p class="local-badge">Powered by local LLM</p>
+      <h2>Compliance Summary</h2>
+      <p class="desc">Describe the customer’s FortiGate setup (or paste a short config summary). Get a brief compliance-style paragraph for auditors.</p>
+      <textarea id="compliance-desc" class="medium" placeholder="e.g. FortiGate at main office, firewall policies, SSL-VPN, logs to FortiAnalyzer…" rows="4"></textarea>
+      <div class="row">
+        <button type="button" class="primary" id="btn-compliance">Generate summary</button>
+        <button type="button" class="secondary" id="btn-sample-compliance">Load sample</button>
+      </div>
+      <div id="result-compliance" class="result empty">Compliance summary will appear here.</div>
+    </div>
+
+    <div id="panel-troubleshoot" class="panel">
+      <p class="local-badge">Powered by local LLM</p>
+      <h2>Troubleshooter</h2>
+      <p class="desc">Describe the symptom (e.g. “VPN users can’t reach file server”). Optionally add log lines or config. Get likely causes and suggested checks.</p>
+      <textarea id="troubleshoot-symptom" class="medium" placeholder="e.g. Users on SSL-VPN cannot reach internal server 10.50.1.10" rows="2"></textarea>
+      <textarea id="troubleshoot-logs" class="medium" placeholder="Optional: paste a few log lines or config snippets" rows="3"></textarea>
+      <div class="row">
+        <button type="button" class="primary" id="btn-troubleshoot">Suggest checks</button>
+        <button type="button" class="secondary" id="btn-sample-troubleshoot">Load sample</button>
+      </div>
+      <div id="result-troubleshoot" class="result empty">Likely causes and suggested checks will appear here.</div>
+    </div>
+
+    <p class="hint">Requires Ollama (e.g. <code>ollama run phi3:mini</code>). All AI runs locally; no data leaves this machine.</p>
+  </div>
+
+  <script>
+    (function () {
+      var panels = document.querySelectorAll('.panel');
+      var tabs = document.querySelectorAll('.tab');
+      tabs.forEach(function (t) {
+        t.onclick = function () {
+          var id = t.getAttribute('data-panel');
+          panels.forEach(function (p) {
+            p.classList.toggle('active', p.id === 'panel-' + id);
+          });
+          tabs.forEach(function (tb) {
+            tb.classList.toggle('active', tb.getAttribute('data-panel') === id);
+          });
+        };
+      });
+
+      function setResult(id, text, isError) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        el.classList.remove('empty', 'error');
+        el.textContent = text;
+        if (isError) el.classList.add('error');
+      }
+
+      function setOllamaStatus(ok, msg) {
+        var dot = document.getElementById('ollama-dot');
+        var status = document.getElementById('ollama-status');
+        if (dot) dot.classList.toggle('off', !ok);
+        if (status) status.textContent = msg;
+      }
+
+      fetch('/api/status')
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (data.ok) {
+            var model = data.default || 'Ollama';
+            setOllamaStatus(true, 'Ollama connected (' + model + ')');
+          } else {
+            setOllamaStatus(false, 'Ollama not connected — run: ollama run phi3:mini');
+          }
+        })
+        .catch(function () {
+          setOllamaStatus(false, 'Ollama not connected — run: ollama run phi3:mini');
+        });
+
+      function apiPost(path, body, resultId, btnId, loadingText) {
+        var btn = document.getElementById(btnId);
+        if (btn) btn.disabled = true;
+        setResult(resultId, loadingText || 'Processing…', false);
+        fetch(path, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        })
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            if (data.error) {
+              setResult(resultId, data.error, true);
+            } else if (data.output) {
+              setResult(resultId, data.output, false);
+            } else if (data.summary || data.cli || data.raw) {
+              var out = (data.summary ? 'Summary: ' + data.summary + '\n\n' : '') + (data.cli || data.raw || '');
+              setResult(resultId, out, false);
+            } else if (data.narrative) {
+              setResult(resultId, data.narrative, false);
+            } else if (data.report) {
+              setResult(resultId, data.report, false);
+            }
+          })
+          .catch(function (err) {
+            setResult(resultId, 'Request failed: ' + err.message, true);
+          })
+          .then(function () {
+            if (btn) btn.disabled = false;
+          });
+      }
+
+      document.getElementById('btn-policy').onclick = function () {
+        var intent = document.getElementById('intent').value.trim();
+        apiPost('/api/policy-translate', { intent: intent }, 'result-policy', 'btn-policy', 'Generating…');
+      };
+
+      document.getElementById('btn-sample-logs').onclick = function () {
+        fetch('/api/sample-logs').then(function (r) { return r.text(); }).then(function (t) {
+          document.getElementById('logs').value = t;
+        });
+      };
+
+      document.getElementById('btn-triage').onclick = function () {
+        var logs = document.getElementById('logs').value;
+        apiPost('/api/alert-triage', { logs: logs }, 'result-triage', 'btn-triage', 'Triaging…');
+      };
+
+      document.getElementById('btn-sample-telemetry').onclick = function () {
+        fetch('/api/sample-telemetry').then(function (r) { return r.json(); }).then(function (obj) {
+          document.getElementById('telemetry').value = JSON.stringify(obj, null, 2);
+        });
+      };
+
+      document.getElementById('btn-report').onclick = function () {
+        var raw = document.getElementById('telemetry').value.trim();
+        var telemetry = null;
+        if (raw) {
+          try {
+            telemetry = JSON.parse(raw);
+          } catch (e) {
+            setResult('result-report', 'Invalid JSON: ' + e.message, true);
+            return;
+          }
+        }
+        apiPost('/api/report-narrate', { telemetry: telemetry }, 'result-report', 'btn-report', 'Generating report…');
+      };
+
+      document.getElementById('btn-sample-quote').onclick = function () {
+        fetch('/api/sample-quote').then(function (r) { return r.json(); }).then(function (d) {
+          document.getElementById('quote-requirements').value = d.requirements || '';
+        });
+      };
+      document.getElementById('btn-quote').onclick = function () {
+        var requirements = document.getElementById('quote-requirements').value.trim();
+        apiPost('/api/quote-bom', { requirements: requirements }, 'result-quote', 'btn-quote', 'Suggesting SKUs…');
+      };
+
+      document.getElementById('btn-sample-vpn').onclick = function () {
+        fetch('/api/sample-vpn-intent').then(function (r) { return r.json(); }).then(function (d) {
+          document.getElementById('vpn-intent').value = d.intent || '';
+        });
+      };
+
+      document.getElementById('btn-vpn').onclick = function () {
+        var intent = document.getElementById('vpn-intent').value.trim();
+        apiPost('/api/vpn-intent', { intent: intent }, 'result-vpn', 'btn-vpn', 'Generating…');
+      };
+
+      document.getElementById('btn-sample-compliance').onclick = function () {
+        fetch('/api/sample-compliance').then(function (r) { return r.json(); }).then(function (d) {
+          document.getElementById('compliance-desc').value = d.description || '';
+        });
+      };
+
+      document.getElementById('btn-compliance').onclick = function () {
+        var description = document.getElementById('compliance-desc').value.trim();
+        apiPost('/api/compliance-summary', { description: description }, 'result-compliance', 'btn-compliance', 'Generating…');
+      };
+
+      document.getElementById('btn-sample-troubleshoot').onclick = function () {
+        fetch('/api/sample-troubleshoot').then(function (r) { return r.json(); }).then(function (d) {
+          document.getElementById('troubleshoot-symptom').value = d.symptom || '';
+          document.getElementById('troubleshoot-logs').value = '';
+        });
+      };
+
+      document.getElementById('btn-troubleshoot').onclick = function () {
+        var symptom = document.getElementById('troubleshoot-symptom').value.trim();
+        var logs = document.getElementById('troubleshoot-logs').value.trim();
+        apiPost('/api/troubleshoot', { symptom: symptom, logs_or_config: logs }, 'result-troubleshoot', 'btn-troubleshoot', 'Analyzing…');
+      };
+
+      document.getElementById('btn-sample-telemetry').click();
+    })();
+  </script>
+</body>
+</html>

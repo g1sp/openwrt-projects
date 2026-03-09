@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fortinet Partner Demo — Local AI (Mockup)</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface2: #21262d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent: #f0883e;
+      --green: #3fb950;
+      --red: #f85149;
+      --border: #30363d;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      min-height: 100vh;
+      padding: 0 0 2rem;
+      line-height: 1.5;
+    }
+    .local-ai-banner {
+      background: linear-gradient(90deg, rgba(35, 134, 54, 0.2) 0%, rgba(35, 134, 54, 0.05) 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 0.75rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .local-ai-banner .badge { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; font-weight: 500; }
+    .local-ai-banner .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--green);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+    .local-ai-banner .tagline { color: var(--muted); font-size: 0.85rem; }
+    .local-ai-banner .tagline strong { color: var(--text); }
+    .container { max-width: 54rem; margin: 0 auto; padding: 1.5rem 2rem 0; }
+    h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.25rem; }
+    .sub { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.25rem; }
+    .tabs {
+      display: flex; gap: 0.25rem; margin-bottom: 1.25rem;
+      border-bottom: 1px solid var(--surface2); flex-wrap: wrap;
+    }
+    .tab {
+      padding: 0.6rem 0.9rem; font-size: 0.85rem;
+      background: transparent; border: none; border-bottom: 2px solid transparent;
+      color: var(--muted); cursor: pointer;
+    }
+    .tab:hover { color: var(--text); }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .panel { display: none; }
+    .panel.active { display: block; }
+    .panel h2 { font-size: 1.1rem; margin: 0 0 0.35rem; color: var(--accent); }
+    .panel .desc { font-size: 0.85rem; color: var(--muted); margin-bottom: 1rem; }
+    .panel .local-badge {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      font-size: 0.75rem; color: var(--green); margin-bottom: 0.75rem;
+    }
+    .panel .local-badge::before {
+      content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--green);
+    }
+    textarea {
+      width: 100%; min-height: 80px; padding: 0.75rem 1rem; font-size: 0.9rem;
+      font-family: ui-monospace, monospace; border: 1px solid var(--surface2);
+      border-radius: 8px; background: var(--surface); color: var(--text); resize: vertical;
+    }
+    textarea.medium { min-height: 100px; }
+    textarea.tall { min-height: 140px; }
+    textarea::placeholder { color: var(--muted); }
+    textarea:focus { outline: none; border-color: var(--accent); }
+    .row { display: flex; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap; align-items: center; }
+    button.primary {
+      padding: 0.6rem 1.25rem; font-size: 0.95rem; font-weight: 500;
+      border: none; border-radius: 8px; background: var(--accent); color: var(--bg); cursor: pointer;
+    }
+    button.primary:hover { opacity: 0.9; }
+    button.primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    button.secondary {
+      padding: 0.5rem 1rem; font-size: 0.85rem;
+      border: 1px solid var(--surface2); border-radius: 8px;
+      background: var(--surface); color: var(--text); cursor: pointer;
+    }
+    button.secondary:hover { border-color: var(--muted); }
+    .result {
+      background: var(--surface); border-radius: 8px; padding: 1rem 1.25rem; margin-top: 1rem;
+      min-height: 2.5rem; white-space: pre-wrap; word-break: break-word; font-size: 0.9rem;
+      border: 1px solid var(--border);
+    }
+    .result.empty { color: var(--muted); }
+    .result.error { border-left: 4px solid var(--red); }
+    .hint { font-size: 0.8rem; color: var(--muted); margin-top: 1rem; }
+    .hint code { background: var(--surface2); padding: 0.1rem 0.35rem; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <header class="local-ai-banner">
+    <span class="badge">
+      <span class="dot"></span>
+      <span>Demo mockup</span>
+    </span>
+    <span class="tagline"><strong>Live version</strong> runs with Ollama on your machine — no data sent to the cloud. This page shows sample outputs only.</span>
+  </header>
+
+  <div class="container">
+    <h1>Fortinet Partner Demo</h1>
+    <p class="sub">Use cases powered by a local LLM (Ollama). Policy, alerts, reports, VPN, compliance, and troubleshooting — your data never leaves this device.</p>
+
+    <div class="tabs">
+      <button type="button" class="tab active" data-panel="policy">Policy</button>
+      <button type="button" class="tab" data-panel="triage">Alert Triage</button>
+      <button type="button" class="tab" data-panel="report">Report</button>
+      <button type="button" class="tab" data-panel="quote">Quote / BOM</button>
+      <button type="button" class="tab" data-panel="vpn">VPN Wizard</button>
+      <button type="button" class="tab" data-panel="compliance">Compliance</button>
+      <button type="button" class="tab" data-panel="troubleshoot">Troubleshoot</button>
+    </div>
+
+    <div id="panel-policy" class="panel active">
+      <p class="local-badge">Powered by local LLM (when run locally)</p>
+      <h2>Policy Translator</h2>
+      <p class="desc">Plain-English security intent → FortiOS CLI and summary. Output is for human review; nothing is applied.</p>
+      <textarea id="intent" class="medium" placeholder="e.g. Block all outbound traffic to Tor exit nodes except from the security research VLAN" rows="3"></textarea>
+      <div class="row">
+        <button type="button" class="primary" id="btn-policy">Generate CLI</button>
+      </div>
+      <div id="result-policy" class="result empty">Output will appear here.</div>
+    </div>
+
+    <div id="panel-triage" class="panel">
+      <p class="local-badge">Powered by local LLM (when run locally)</p>
+      <h2>Alert Triage Engine</h2>
+      <p class="desc">Paste FortiAnalyzer-style log lines (or load sample). Get a prioritized triage report.</p>
+      <textarea id="logs" class="tall" placeholder="Paste log lines here or click Load sample." rows="8"></textarea>
+      <div class="row">
+        <button type="button" class="primary" id="btn-triage">Triage</button>
+        <button type="button" class="secondary" id="btn-sample-logs">Load sample</button>
+      </div>
+      <div id="result-triage" class="result empty">Triage report will appear here.</div>
+    </div>
+
+    <div id="panel-report" class="panel">
+      <p class="local-badge">Powered by local LLM (when run locally)</p>
+      <h2>Customer Report Narrator</h2>
+      <p class="desc">Generate an executive monthly security report from telemetry.</p>
+      <textarea id="telemetry" class="medium" placeholder="JSON telemetry (or use Load sample)" rows="6"></textarea>
+      <div class="row">
+        <button type="button" class="primary" id="btn-report">Generate report</button>
+        <button type="button" class="secondary" id="btn-sample-telemetry">Load sample</button>
+      </div>
+      <div id="result-report" class="result empty">Executive narrative will appear here.</div>
+    </div>
+
+    <div id="panel-quote" class="panel">
+      <p class="local-badge">Powered by local LLM (when run locally)</p>
+      <h2>Quote / BOM Assistant</h2>
+      <p class="desc">Describe the customer requirement (users, sites, features). Get suggested FortiGate model and license bundles with short rationale. Add your own pricing.</p>
+      <textarea id="quote-requirements" class="medium" placeholder="e.g. 50 users, 2 sites, need firewall with VPN and UTM, possible HA later" rows="3"></textarea>
+      <div class="row">
+        <button type="button" class="primary" id="btn-quote">Suggest SKUs</button>
+        <button type="button" class="secondary" id="btn-sample-quote">Load sample</button>
+      </div>
+      <div id="result-quote" class="result empty">Suggested SKUs and rationale will appear here.</div>
+    </div>
+
+    <div id="panel-vpn" class="panel">
+      <p class="local-badge">Powered by local LLM (when run locally)</p>
+      <h2>VPN Wizard</h2>
+      <p class="desc">Describe the VPN requirement in plain English. Get a checklist, FortiOS CLI snippets, and caveats.</p>
+      <textarea id="vpn-intent" class="medium" placeholder="e.g. Remote access VPN for 25 users with split tunnel" rows="3"></textarea>
+      <div class="row">
+        <button type="button" class="primary" id="btn-vpn">Generate checklist & CLI</button>
+        <button type="button" class="secondary" id="btn-sample-vpn">Load sample</button>
+      </div>
+      <div id="result-vpn" class="result empty">Checklist and CLI will appear here.</div>
+    </div>
+
+    <div id="panel-compliance" class="panel">
+      <p class="local-badge">Powered by local LLM (when run locally)</p>
+      <h2>Compliance Summary</h2>
+      <p class="desc">Describe the customer’s FortiGate setup. Get a brief compliance-style paragraph for auditors.</p>
+      <textarea id="compliance-desc" class="medium" placeholder="e.g. FortiGate at main office, firewall, SSL-VPN, logs to FortiAnalyzer…" rows="4"></textarea>
+      <div class="row">
+        <button type="button" class="primary" id="btn-compliance">Generate summary</button>
+        <button type="button" class="secondary" id="btn-sample-compliance">Load sample</button>
+      </div>
+      <div id="result-compliance" class="result empty">Compliance summary will appear here.</div>
+    </div>
+
+    <div id="panel-troubleshoot" class="panel">
+      <p class="local-badge">Powered by local LLM (when run locally)</p>
+      <h2>Troubleshooter</h2>
+      <p class="desc">Describe the symptom. Get likely causes and suggested checks.</p>
+      <textarea id="troubleshoot-symptom" class="medium" placeholder="e.g. VPN users cannot reach internal server 10.50.1.10" rows="2"></textarea>
+      <textarea id="troubleshoot-logs" class="medium" placeholder="Optional: paste log lines or config" rows="3"></textarea>
+      <div class="row">
+        <button type="button" class="primary" id="btn-troubleshoot">Suggest checks</button>
+        <button type="button" class="secondary" id="btn-sample-troubleshoot">Load sample</button>
+      </div>
+      <div id="result-troubleshoot" class="result empty">Likely causes and suggested checks will appear here.</div>
+    </div>
+
+    <p class="hint">This is a <strong>static mockup</strong>. For live AI, run <code>python3 server.py</code> and open the app with Ollama (e.g. <code>ollama run phi3:mini</code>).</p>
+  </div>
+
+  <script>
+    (function () {
+      var panels = document.querySelectorAll('.panel');
+      var tabs = document.querySelectorAll('.tab');
+      tabs.forEach(function (t) {
+        t.onclick = function () {
+          var id = t.getAttribute('data-panel');
+          panels.forEach(function (p) { p.classList.toggle('active', p.id === 'panel-' + id); });
+          tabs.forEach(function (tb) { tb.classList.toggle('active', tb.getAttribute('data-panel') === id); });
+        };
+      });
+
+      function setResult(id, text, isError) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        el.classList.remove('empty', 'error');
+        el.textContent = text;
+        if (isError) el.classList.add('error');
+      }
+
+      function simulateDelay(btnId, resultId, loadingText, output) {
+        var btn = document.getElementById(btnId);
+        if (btn) btn.disabled = true;
+        setResult(resultId, loadingText, false);
+        setTimeout(function () {
+          setResult(resultId, output, false);
+          if (btn) btn.disabled = false;
+        }, 900);
+      }
+
+      var SAMPLE_LOGS = "2025-02-21 10:01:23 device=FortiGate-01 type=ips subtype=signature src=192.168.10.50 dst=203.0.113.10 msg=\"ET TOR Known Tor Relay\"\n2025-02-21 10:01:24 device=FortiGate-01 type=utm subtype=webfilter src=192.168.10.51 dst=0.0.0.0 msg=\"URL blocked: malware.example.com\"\n2025-02-21 10:10:33 device=FortiGate-01 type=ips subtype=signature src=192.168.10.99 dst=198.51.100.5 msg=\"ET MALWARE C2 Beacon\"\n2025-02-21 10:11:02 device=FortiGate-01 type=vpn subtype=ssl src=192.168.10.10 msg=\"SSL-VPN login success\"";
+      var SAMPLE_TELEMETRY = { "period": "January 2025", "blocked_threats": 47, "vpn_sessions_total": 120, "bandwidth_mbps_avg": 85, "web_filter_blocks": 312, "ips_alerts": 18 };
+      var SAMPLE_VPN = "Remote access VPN for about 30 users, split tunnel so only corporate traffic goes through the tunnel. No guest or contractor access for now.";
+      var SAMPLE_COMPLIANCE = "FortiGate 60F at main office, firewall policies for LAN/WAN/DMZ, SSL-VPN for 20 remote users, logs sent to FortiAnalyzer on-prem. Admin access via HTTPS with local users.";
+      var SAMPLE_TROUBLESHOOT = "Users connecting over SSL-VPN cannot reach the internal file server at 10.50.1.10. They can reach the internet and the VPN tunnel is up.";
+      var SAMPLE_QUOTE = "Customer needs firewall with VPN and full UTM for about 50 users, 2 sites. May want HA in 12 months.";
+
+      var SAMPLE_POLICY_OUT = "Summary: Blocks outbound traffic to known Tor exit nodes from all sources except devices on the security research VLAN, using an address object and a deny policy with a source exception.\n\n## CLI\nconfig firewall address\n  edit \"Block-Tor-ExitNodes\"\n    set type iprange\n    set start-ip 0.0.0.0\n    set end-ip 255.255.255.255\n    set comment \"Use external blocklist or GeoIP for Tor\"\n  next\nend\nconfig firewall policy\n  edit 0\n    set name \"Deny-Tor-Except-Research\"\n    set srcintf \"lan\"\n    set dstintf \"wan\"\n    set srcaddr \"Block-Tor-ExitNodes\"\n    set dstaddr \"all\"\n    set action deny\n    set schedule \"always\"\n    set service \"ALL\"\n  next\nend";
+      var SAMPLE_TRIAGE_OUT = "## Triage Report\n### High priority\n- ET MALWARE C2 Beacon from 192.168.10.99 — Recommended action: Isolate host 192.168.10.99 and run endpoint scan; review outbound connections.\n- Repeated TOR traffic from 192.168.10.50 — Recommended action: Confirm if research/VPN use; if not, block and investigate.\n### Medium priority\n- URL blocked (malware.example.com) from 192.168.10.51 — Recommended action: Check if user intended to visit; scan device.\n### Low priority\n- SSL-VPN login success — Informational; no action unless unexpected.";
+      var SAMPLE_REPORT_OUT = "This report summarizes your Fortinet security posture for January 2025.\n\nYour organization blocked 47 threats and 312 web filter events during the period, with 18 IPS alerts. VPN usage remained strong with 120 sessions, and average bandwidth was 85 Mbps. The most active source and top blocked category (Malware) indicate that perimeter controls are actively mitigating risk.\n\nWe recommend reviewing the top talker (192.168.10.50) for policy alignment and ensuring VPN and UTM subscriptions are current for the next period.";
+      var SAMPLE_VPN_OUT = "## Checklist\n- Create SSL-VPN portal and assign address pool for 30 users.\n- Create user group (e.g. VPN-RemoteUsers) and add users.\n- Configure firewall policy: WAN (SSLVPN tunnel) to LAN with split-tunnel so only corporate subnets use the tunnel.\n- Restrict VPN to the new group; no guest/contractor group.\n## CLI\nconfig vpn ssl settings\n  set tunnel-addr-pool 10.212.134.200 10.212.134.220\nend\nconfig user group\n  edit \"VPN-RemoteUsers\"\n    set member \"user1\" \"user2\"\n  next\nend\nconfig firewall policy\n  edit 0\n    set name \"SSLVPN-to-LAN\"\n    set srcintf \"ssl.root\"\n    set dstintf \"lan\"\n    set srcaddr \"all\"\n    set dstaddr \"corporate-subnets\"\n    set action accept\n  next\nend\n## Caveats\nUse a dedicated address pool for VPN and enable 2FA for remote users if available. Review split-tunnel routes so only required subnets are tunneled.";
+      var SAMPLE_COMPLIANCE_OUT = "The environment uses a central FortiGate firewall with policies governing LAN, WAN, and DMZ traffic. Access control is enforced via firewall rules and SSL-VPN for 20 remote users; administrative access is over HTTPS with local authentication. Logging is centralized to an on-prem FortiAnalyzer for monitoring and retention. Encryption is in place for VPN and management.\n\nControls in place:\n- Firewall policies (LAN/WAN/DMZ)\n- SSL-VPN with local user auth\n- Centralized logging (FortiAnalyzer)\n- HTTPS admin access";
+      var SAMPLE_TROUBLESHOOT_OUT = "**Likely causes**\n1. Firewall policy from SSL-VPN tunnel to LAN does not allow traffic to 10.50.1.10 (or the file-server subnet).\n2. Split-tunnel configuration excludes 10.50.1.0/24, so traffic to the file server goes out the user’s local internet instead of the tunnel.\n3. DNS: VPN clients may not resolve the file server hostname to 10.50.1.10 if DNS is not pushed via VPN.\n\n**Suggested checks**\n- Check firewall policy from ssl.root to lan allowing traffic to 10.50.1.10 or the server subnet.\n- Verify VPN address pool and split-tunnel include 10.50.1.0/24 (or the correct subnet).\n- From a VPN client, run: ping 10.50.1.10 and nslookup file-server.internal.\n\n**One quick win**\nVerify the policy from the SSL-VPN interface to LAN that allows traffic to 10.50.1.10; if missing or too restrictive, add or adjust the rule.";
+      var SAMPLE_QUOTE_OUT = "## Suggested BOM (add your pricing)\n\n**Firewall**\n- FortiGate 61F (or 60F) — suitable for &lt;50 users, 2 sites; supports UTM, VPN, and HA. 61F gives more headroom for growth and HA.\n\n**Licenses (typical 1-year)**\n- FortiCare — support and firmware.\n- FortiGuard Unified Threat Protection (UTP) — IPS, AV, web filtering, app control for full UTM.\n- FortiClient (optional) — for remote users; consider 50 seats if all users need VPN/endpoint.\n\n**For second site**\n- Second FortiGate 61F (or 60F) with same UTP + FortiCare; or pair for HA at primary.\n\n**Rationale:** 50 users and 2 sites fit the 60F/61F tier. UTP covers UTM in one SKU. If they add HA later, you can quote the second unit and link license. FortiClient is optional but improves remote-user experience and visibility.";
+
+      document.getElementById('btn-policy').onclick = function () {
+        simulateDelay('btn-policy', 'result-policy', 'Generating…', SAMPLE_POLICY_OUT);
+      };
+      document.getElementById('btn-sample-logs').onclick = function () {
+        document.getElementById('logs').value = SAMPLE_LOGS;
+      };
+      document.getElementById('btn-triage').onclick = function () {
+        simulateDelay('btn-triage', 'result-triage', 'Triaging…', SAMPLE_TRIAGE_OUT);
+      };
+      document.getElementById('btn-sample-telemetry').onclick = function () {
+        document.getElementById('telemetry').value = JSON.stringify(SAMPLE_TELEMETRY, null, 2);
+      };
+      document.getElementById('btn-report').onclick = function () {
+        simulateDelay('btn-report', 'result-report', 'Generating report…', SAMPLE_REPORT_OUT);
+      };
+      document.getElementById('btn-sample-quote').onclick = function () {
+        document.getElementById('quote-requirements').value = SAMPLE_QUOTE;
+      };
+      document.getElementById('btn-quote').onclick = function () {
+        simulateDelay('btn-quote', 'result-quote', 'Suggesting SKUs…', SAMPLE_QUOTE_OUT);
+      };
+      document.getElementById('btn-sample-vpn').onclick = function () {
+        document.getElementById('vpn-intent').value = SAMPLE_VPN;
+      };
+      document.getElementById('btn-vpn').onclick = function () {
+        simulateDelay('btn-vpn', 'result-vpn', 'Generating…', SAMPLE_VPN_OUT);
+      };
+      document.getElementById('btn-sample-compliance').onclick = function () {
+        document.getElementById('compliance-desc').value = SAMPLE_COMPLIANCE;
+      };
+      document.getElementById('btn-compliance').onclick = function () {
+        simulateDelay('btn-compliance', 'result-compliance', 'Generating…', SAMPLE_COMPLIANCE_OUT);
+      };
+      document.getElementById('btn-sample-troubleshoot').onclick = function () {
+        document.getElementById('troubleshoot-symptom').value = SAMPLE_TROUBLESHOOT;
+        document.getElementById('troubleshoot-logs').value = '';
+      };
+      document.getElementById('btn-troubleshoot').onclick = function () {
+        simulateDelay('btn-troubleshoot', 'result-troubleshoot', 'Analyzing…', SAMPLE_TROUBLESHOOT_OUT);
+      };
+
+      document.getElementById('btn-sample-telemetry').click();
+    })();
+  </script>
+</body>
+</html>
