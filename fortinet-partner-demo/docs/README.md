@@ -50,7 +50,7 @@ If this `docs/` folder is already inside a repo (e.g. `OpenWrt`):
 
 ## What your friend sees
 
-- The same six tabs: Policy, Alert Triage, Report, VPN Wizard, Compliance, Troubleshoot.
+- The same eight tabs: Policy, Alert Triage, Report, Quote/BOM, Customer Products, VPN Wizard, Compliance, Troubleshoot.
 - Banner: **Demo mockup** — “Live version runs with Ollama on your machine.”
 - **Load sample** fills the text areas; **Generate** / **Triage** etc. show **pre-written sample outputs** (no real AI; simulates a short delay).
 - Footer note: for live AI, run the Python server locally with Ollama.

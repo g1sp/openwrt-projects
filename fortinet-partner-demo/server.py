@@ -90,6 +90,19 @@ Do not include pricing. Output format — use these headers:
 ## Suggested BOM (add your pricing)
 **Firewall** / **Licenses** / **Rationale** or similar. Keep it concise so a partner can paste into a quote tool."""
 
+CUSTOMER_PRODUCTS_SYSTEM = """You are a Fortinet partner assistant. The user will provide a customer name and/or a short description of their environment (e.g. "Acme Corp — 2 offices" or "FortiGate at HQ with VPN and FortiAnalyzer"). Your job is to infer and list the Fortinet products typically deployed in such an environment.
+
+Output format — use these section headers:
+## Fortinet products deployed — [customer name]
+
+**Firewall / Gateways** — FortiGate model(s), location, key features and licenses
+**Logging & Analytics** — FortiAnalyzer if mentioned
+**Endpoint / Remote** — FortiClient, FortiEMS if remote/VPN mentioned
+**Licenses** — FortiCare, FortiGuard, UTP, etc.
+**Summary** — One line inventory + any renewal or upsell hint (e.g. "Renewal in 6 months")
+
+Use realistic FortiGate models (60F, 40F, 80F, etc.) and real product names. If the description is vague, infer a plausible small-to-mid-size deployment. Do not invent specific customer data; use generic placeholders. Keep it concise for a partner preparing for a meeting or renewal."""
+
 # --- Sample data for "Load sample" in UI ---
 SAMPLE_LOGS = """2025-02-21 10:01:23 device=FortiGate-01 type=ips subtype=signature src=192.168.10.50 dst=203.0.113.10 msg="ET TOR Known Tor Relay"
 2025-02-21 10:01:24 device=FortiGate-01 type=utm subtype=webfilter src=192.168.10.51 dst=0.0.0.0 msg="URL blocked: malware.example.com"
@@ -120,6 +133,8 @@ SAMPLE_COMPLIANCE_INPUT = "FortiGate 60F at main office, firewall policies for L
 SAMPLE_TROUBLESHOOT = "Users connecting over SSL-VPN cannot reach the internal file server at 10.50.1.10. They can reach the internet and the VPN tunnel is up."
 
 SAMPLE_QUOTE = "Customer needs firewall with VPN and full UTM for about 50 users, 2 sites. May want HA in 12 months."
+
+SAMPLE_PRODUCTS_INPUT = "Acme Corp — main office plus one branch. They use FortiGate for firewall, SSL-VPN for remote workers, and log to FortiAnalyzer."
 
 
 def ollama_generate(prompt: str, system: str = "") -> str:
@@ -227,6 +242,14 @@ def handle_quote_bom(requirements: str) -> dict:
     return {"ok": True, "output": out}
 
 
+def handle_customer_products(customer_desc: str) -> dict:
+    if not (customer_desc or "").strip():
+        return {"ok": False, "error": "Enter customer name or environment description."}
+    prompt = f"Customer / environment:\n{customer_desc.strip()}\n\nList the Fortinet products deployed as specified."
+    out = ollama_generate(prompt, system=CUSTOMER_PRODUCTS_SYSTEM)
+    return {"ok": True, "output": out}
+
+
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == "/" or self.path == "/index.html":
@@ -279,6 +302,12 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(json.dumps({"requirements": SAMPLE_QUOTE}).encode("utf-8"))
             return
+        if self.path == "/api/sample-products":
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(json.dumps({"customer_desc": SAMPLE_PRODUCTS_INPUT}).encode("utf-8"))
+            return
         self.send_response(404)
         self.end_headers()
 
@@ -305,6 +334,8 @@ class Handler(BaseHTTPRequestHandler):
             result = handle_troubleshoot(data.get("symptom", ""), data.get("logs_or_config", ""))
         elif self.path == "/api/quote-bom":
             result = handle_quote_bom(data.get("requirements", ""))
+        elif self.path == "/api/customer-products":
+            result = handle_customer_products(data.get("customer_desc", ""))
 
         if result is None:
             self.send_response(404)

@@ -18,13 +18,15 @@ Synapse-style demos for Fortinet channel partners: **Policy Translator**, **Aler
 
 The UI shows an **Ollama status** indicator and a clear message: *"All processing runs on your machine via Ollama. No data is sent to the cloud."* Every demo panel is labeled **Powered by local LLM**. No telemetry or prompts leave the device.
 
-## Demos (six)
+## Demos (eight)
 
 | Demo | What it does |
 |------|----------------|
 | **Policy Translator** | Plain-English security intent → FortiOS CLI + summary. For human review only. |
 | **Alert Triage Engine** | FortiAnalyzer-style log lines → prioritized triage report (High/Medium/Low) with explanations and actions. |
 | **Customer Report Narrator** | Telemetry (blocked threats, VPN, bandwidth) → executive monthly security narrative for C-level. |
+| **Quote / BOM** | Customer requirements (users, sites, UTM, HA) → suggested FortiGate model and license bundles with rationale. |
+| **Customer Products** | Customer name or environment description → list of Fortinet products deployed (FortiGate, FortiAnalyzer, FortiClient); handy before meetings, renewals, or audits. |
 | **VPN Wizard** | Describe VPN requirement (e.g. "Remote access for 30 users, split tunnel") → checklist, FortiOS CLI snippets, and caveats. |
 | **Compliance Summary** | Short description of customer setup → one-paragraph compliance summary + controls list for auditors. |
 | **Troubleshooter** | Symptom (e.g. "VPN users can't reach file server") + optional logs → likely causes, suggested checks, and one quick win. |

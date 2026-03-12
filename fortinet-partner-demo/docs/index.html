@@ -121,6 +121,7 @@
       <button type="button" class="tab" data-panel="triage">Alert Triage</button>
       <button type="button" class="tab" data-panel="report">Report</button>
       <button type="button" class="tab" data-panel="quote">Quote / BOM</button>
+      <button type="button" class="tab" data-panel="products">Products</button>
       <button type="button" class="tab" data-panel="vpn">VPN Wizard</button>
       <button type="button" class="tab" data-panel="compliance">Compliance</button>
       <button type="button" class="tab" data-panel="troubleshoot">Troubleshoot</button>
@@ -171,6 +172,18 @@
         <button type="button" class="secondary" id="btn-sample-quote">Load sample</button>
       </div>
       <div id="result-quote" class="result empty">Suggested SKUs and rationale will appear here.</div>
+    </div>
+
+    <div id="panel-products" class="panel">
+      <p class="local-badge">Powered by local LLM (when run locally)</p>
+      <h2>Customer Products</h2>
+      <p class="desc">Enter customer name or a short description of their environment. Get a list of Fortinet products deployed (FortiGate, FortiAnalyzer, FortiClient, etc.) — useful before meetings, renewals, or audits.</p>
+      <textarea id="products-input" class="medium" placeholder="e.g. Acme Corp — 2 offices, main + branch" rows="2"></textarea>
+      <div class="row">
+        <button type="button" class="primary" id="btn-products">List products</button>
+        <button type="button" class="secondary" id="btn-sample-products">Load sample</button>
+      </div>
+      <div id="result-products" class="result empty">Product inventory will appear here.</div>
     </div>
 
     <div id="panel-vpn" class="panel">
@@ -249,6 +262,7 @@
       var SAMPLE_COMPLIANCE = "FortiGate 60F at main office, firewall policies for LAN/WAN/DMZ, SSL-VPN for 20 remote users, logs sent to FortiAnalyzer on-prem. Admin access via HTTPS with local users.";
       var SAMPLE_TROUBLESHOOT = "Users connecting over SSL-VPN cannot reach the internal file server at 10.50.1.10. They can reach the internet and the VPN tunnel is up.";
       var SAMPLE_QUOTE = "Customer needs firewall with VPN and full UTM for about 50 users, 2 sites. May want HA in 12 months.";
+      var SAMPLE_PRODUCTS = "Acme Corp — main office plus one branch. They use FortiGate for firewall, SSL-VPN for remote workers, and log to FortiAnalyzer.";
 
       var SAMPLE_POLICY_OUT = "Summary: Blocks outbound traffic to known Tor exit nodes from all sources except devices on the security research VLAN, using an address object and a deny policy with a source exception.\n\n## CLI\nconfig firewall address\n  edit \"Block-Tor-ExitNodes\"\n    set type iprange\n    set start-ip 0.0.0.0\n    set end-ip 255.255.255.255\n    set comment \"Use external blocklist or GeoIP for Tor\"\n  next\nend\nconfig firewall policy\n  edit 0\n    set name \"Deny-Tor-Except-Research\"\n    set srcintf \"lan\"\n    set dstintf \"wan\"\n    set srcaddr \"Block-Tor-ExitNodes\"\n    set dstaddr \"all\"\n    set action deny\n    set schedule \"always\"\n    set service \"ALL\"\n  next\nend";
       var SAMPLE_TRIAGE_OUT = "## Triage Report\n### High priority\n- ET MALWARE C2 Beacon from 192.168.10.99 — Recommended action: Isolate host 192.168.10.99 and run endpoint scan; review outbound connections.\n- Repeated TOR traffic from 192.168.10.50 — Recommended action: Confirm if research/VPN use; if not, block and investigate.\n### Medium priority\n- URL blocked (malware.example.com) from 192.168.10.51 — Recommended action: Check if user intended to visit; scan device.\n### Low priority\n- SSL-VPN login success — Informational; no action unless unexpected.";
@@ -257,6 +271,7 @@
       var SAMPLE_COMPLIANCE_OUT = "The environment uses a central FortiGate firewall with policies governing LAN, WAN, and DMZ traffic. Access control is enforced via firewall rules and SSL-VPN for 20 remote users; administrative access is over HTTPS with local authentication. Logging is centralized to an on-prem FortiAnalyzer for monitoring and retention. Encryption is in place for VPN and management.\n\nControls in place:\n- Firewall policies (LAN/WAN/DMZ)\n- SSL-VPN with local user auth\n- Centralized logging (FortiAnalyzer)\n- HTTPS admin access";
       var SAMPLE_TROUBLESHOOT_OUT = "**Likely causes**\n1. Firewall policy from SSL-VPN tunnel to LAN does not allow traffic to 10.50.1.10 (or the file-server subnet).\n2. Split-tunnel configuration excludes 10.50.1.0/24, so traffic to the file server goes out the user’s local internet instead of the tunnel.\n3. DNS: VPN clients may not resolve the file server hostname to 10.50.1.10 if DNS is not pushed via VPN.\n\n**Suggested checks**\n- Check firewall policy from ssl.root to lan allowing traffic to 10.50.1.10 or the server subnet.\n- Verify VPN address pool and split-tunnel include 10.50.1.0/24 (or the correct subnet).\n- From a VPN client, run: ping 10.50.1.10 and nslookup file-server.internal.\n\n**One quick win**\nVerify the policy from the SSL-VPN interface to LAN that allows traffic to 10.50.1.10; if missing or too restrictive, add or adjust the rule.";
       var SAMPLE_QUOTE_OUT = "## Suggested BOM (add your pricing)\n\n**Firewall**\n- FortiGate 61F (or 60F) — suitable for &lt;50 users, 2 sites; supports UTM, VPN, and HA. 61F gives more headroom for growth and HA.\n\n**Licenses (typical 1-year)**\n- FortiCare — support and firmware.\n- FortiGuard Unified Threat Protection (UTP) — IPS, AV, web filtering, app control for full UTM.\n- FortiClient (optional) — for remote users; consider 50 seats if all users need VPN/endpoint.\n\n**For second site**\n- Second FortiGate 61F (or 60F) with same UTP + FortiCare; or pair for HA at primary.\n\n**Rationale:** 50 users and 2 sites fit the 60F/61F tier. UTP covers UTM in one SKU. If they add HA later, you can quote the second unit and link license. FortiClient is optional but improves remote-user experience and visibility.";
+      var SAMPLE_PRODUCTS_OUT = "## Fortinet products deployed — Acme Corp\n\n**Firewall / Gateways**\n- FortiGate 60F (main office) — UTM, SSL-VPN, FortiCare + UTP licensed\n- FortiGate 40F (branch) — firewall, site-to-site VPN to HQ\n\n**Logging & Analytics**\n- FortiAnalyzer (on-prem) — central log collector from both FortiGates\n\n**Endpoint / Remote**\n- FortiClient — ~30 seats for remote users (SSL-VPN + endpoint visibility)\n\n**Licenses**\n- FortiCare (1-year) on both FortiGates\n- FortiGuard UTP on main office FortiGate 60F\n- FortiClient EMS or cloud (30 seats)\n\n**Summary:** 2 FortiGates, 1 FortiAnalyzer, FortiClient for remote workforce. Renewal opportunity on FortiCare and UTP in ~6 months.";
 
       document.getElementById('btn-policy').onclick = function () {
         simulateDelay('btn-policy', 'result-policy', 'Generating…', SAMPLE_POLICY_OUT);
@@ -278,6 +293,12 @@
       };
       document.getElementById('btn-quote').onclick = function () {
         simulateDelay('btn-quote', 'result-quote', 'Suggesting SKUs…', SAMPLE_QUOTE_OUT);
+      };
+      document.getElementById('btn-sample-products').onclick = function () {
+        document.getElementById('products-input').value = SAMPLE_PRODUCTS;
+      };
+      document.getElementById('btn-products').onclick = function () {
+        simulateDelay('btn-products', 'result-products', 'Listing products…', SAMPLE_PRODUCTS_OUT);
       };
       document.getElementById('btn-sample-vpn').onclick = function () {
         document.getElementById('vpn-intent').value = SAMPLE_VPN;
